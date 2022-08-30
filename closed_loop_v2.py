@@ -6,21 +6,31 @@
 ############## Autor: Werbet Luiz Almeida da Silva (werbethluizz@hotmail.com)
 ############## Data: Agosto de 2022
 
+
 from array import array
 import time
+from datetime import datetime
 from quanser.hardware import HIL, HILError
 
+
+ref_cm=19
+
 nivel_tanque_2 = 0.0
-malha_fechada = True
-referencia = 4
-kp = 4
+malha_fechada = False
+referencia = ref_cm * (5 / 30)
+kp = 6
 ki = 2
+tempo_amostragem = 0.05
+
+
+now = 0
+
 
 channels = array('I', [0, 1, 2]) #Entradas analógicas
 num_channels = len(channels)
 buffer = array('d', [0.0] * num_channels)
 
-write_channels = array('I', [0]) #Saídas analógicas
+write_channels = array('I', [0]) #write channel
 write_num_channels = len(write_channels)
 write_buffer = array('d', [3.7])
 
@@ -36,30 +46,49 @@ def main():
     u_max = 4
     u_min = -4
     u = 0
-
+   
     try:
         card.open("q8_usb","0")
+        with open('data.csv', 'a+') as file:
+            file.write(f'DataHora;Referencia;Nivel;Erro;Sinal_de_Controle;Corrente_na_Bomba\n')
         while True:
+            start = datetime.now()
             nivel_tanque_1, nivel_tanque_2, corrente_bomba = leia()
             
-            if malha_fechada:
-                erro = referencia - nivel_tanque_2
-            else:
-                erro = 4
+            
+            erro = referencia - nivel_tanque_2
+                 
+                
+            print("Erro: ", erro)
+            print("Erro ant: ", erro_ant)
 
-            #Controlador:       
-            u = kp * erro + ki * erro_ant
+            #Controlador:
+            if malha_fechada:
+                u = kp * erro + ki * erro_ant
+            else:
+                u = 4
             erro_ant = erro_ant + erro
 
             if erro_ant > 3: #limitador da parcela intergrativa positiva
                 erro_ant = 3
-            if erro_ant < -2: #limitador da parcela intergrativa positiva
-                erro_ant = -2
+            if erro_ant < -3: #limitador da parcela intergrativa negativa
+                erro_ant = -3
+           
+            print('Sinal de controle antes: ', u)
+            
+            
+            erro_new = erro * (30 / 5)
+            nivel_tanque_2_new = nivel_tanque_2 * (30 / 5)      
 
             aplica_controle(u)
-            trava(nivel_tanque_2, u)
-            time.sleep(0.1)
-            
+            trava(nivel_tanque_2, u)       
+
+            time.sleep(tempo_amostragem)
+
+            with open('data.csv', 'a+') as file:
+                file.write(f'{datetime.now()};{ref_cm};{nivel_tanque_2_new:.2f};{erro_new:.2f};{u:.2f};{corrente_bomba:.2f}\n')
+                     
+                
     except HILError as e:
         print(e.get_error_message())
     except KeyboardInterrupt:
@@ -73,7 +102,7 @@ def main():
 def aplica_controle(sinal_controle: float):
     if (sinal_controle >= 4):
         sinal_controle = 4
-    if (sinal_controle <= 0):
+    if (sinal_controle <= -2):
         sinal_controle = -2
     print('Sinal de controle depois: ', sinal_controle)
     write_buffer = array('d', [sinal_controle])
@@ -84,11 +113,13 @@ def aplica_controle(sinal_controle: float):
 def trava(level_2: float, control_signal: float):  #Se o sinal de controle por positivo e atingir o limite máximo, desliga a bomba e para o programa
     #Assim como se o sinal de controle for negativo e atingir o limite mínimo
     print('Trava ativa!')
-    if control_signal < 0 and level_2 < 0.5:
+    if control_signal < 0 and level_2 < 0.1:
         desligar_bomba()
+        print('NÍVEL CRÍTICO INFERIOR ATINGIDO - software interrompido por segurança!!!')
         exit()
-    if control_signal > 0 and level_2 > 4.3:
+    if control_signal > 0 and level_2 > 4.8:
         desligar_bomba()
+        print('NÍVEL CRÍTICO SUPERIOR ATINGIDO - software interrompido por segurança!!!')
         exit()
     
 def desligar_bomba():
