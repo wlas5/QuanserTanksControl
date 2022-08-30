@@ -6,7 +6,6 @@
 ############## Autor: Werbet Luiz Almeida da Silva (werbethluizz@hotmail.com)
 ############## Data: Agosto de 2022
 
-
 from array import array
 import time
 from quanser.hardware import HIL, HILError
@@ -17,11 +16,11 @@ referencia = 4
 kp = 4
 ki = 2
 
-channels = array('I', [0, 1, 2]) #Entradas digitais
+channels = array('I', [0, 1, 2]) #Entradas analógicas
 num_channels = len(channels)
 buffer = array('d', [0.0] * num_channels)
 
-write_channels = array('I', [0]) #write channel
+write_channels = array('I', [0]) #Saídas analógicas
 write_num_channels = len(write_channels)
 write_buffer = array('d', [3.7])
 
@@ -42,32 +41,21 @@ def main():
         card.open("q8_usb","0")
         while True:
             nivel_tanque_1, nivel_tanque_2, corrente_bomba = leia()
-
-            
             
             if malha_fechada:
                 erro = referencia - nivel_tanque_2
             else:
                 erro = 4
 
-                
-            print("Erro: ", erro)
-            print("Erro ant: ", erro_ant)
-
             #Controlador:       
             u = kp * erro + ki * erro_ant
-            #u = 3
             erro_ant = erro_ant + erro
 
             if erro_ant > 3: #limitador da parcela intergrativa positiva
                 erro_ant = 3
             if erro_ant < -2: #limitador da parcela intergrativa positiva
                 erro_ant = -2
-           
-            print('Sinal de controle antes: ', u)
-            
-            
-          
+
             aplica_controle(u)
             trava(nivel_tanque_2, u)
             time.sleep(0.1)
