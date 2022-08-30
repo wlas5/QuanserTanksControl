@@ -13,9 +13,9 @@ Equipamentos necessários:
   
 Para usar a API fornecida pela Quanser para programação em Python os seguintes passos foram seguidos:
 
-1 - Instalação do Python 3.10.6
-2 - Instalação do QUARC 2022 (necessário arquivo de licença)
-3 - Instalação dos pacotes Python da Quanser
+  1 - Instalação do Python 3.10.6
+  2 - Instalação do QUARC 2022 (necessário arquivo de licença)
+  3 - Instalação dos pacotes Python da Quanser
 
 
 
