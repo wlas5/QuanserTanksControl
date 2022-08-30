@@ -46,12 +46,17 @@ def main():
     u_max = 4
     u_min = -4
     u = 0
-   
+    i = 0
+    
+
     try:
         card.open("q8_usb","0")
         with open('data.csv', 'a+') as file:
             file.write(f'DataHora;Referencia;Nivel;Erro;Sinal_de_Controle;Corrente_na_Bomba\n')
         while True:
+            
+
+           
             start = datetime.now()
             nivel_tanque_1, nivel_tanque_2, corrente_bomba = leia()
             
@@ -71,7 +76,7 @@ def main():
 
             if erro_ant > 3: #limitador da parcela intergrativa positiva
                 erro_ant = 3
-            if erro_ant < -3: #limitador da parcela intergrativa negativa
+            if erro_ant < -3: #limitador da parcela intergrativa positiva
                 erro_ant = -3
            
             print('Sinal de controle antes: ', u)
@@ -81,13 +86,16 @@ def main():
             nivel_tanque_2_new = nivel_tanque_2 * (30 / 5)      
 
             aplica_controle(u)
-            trava(nivel_tanque_2, u)       
+            trava(nivel_tanque_2, u)
+           
 
             time.sleep(tempo_amostragem)
 
             with open('data.csv', 'a+') as file:
                 file.write(f'{datetime.now()};{ref_cm};{nivel_tanque_2_new:.2f};{erro_new:.2f};{u:.2f};{corrente_bomba:.2f}\n')
-                     
+            
+                
+                
                 
     except HILError as e:
         print(e.get_error_message())
