@@ -13,30 +13,29 @@ from datetime import datetime
 from quanser.hardware import HIL, HILError
 
 
-ref_cm=19
+ref_cm=29
 
 nivel_tanque_2 = 0.0
-malha_fechada = False
+malha_fechada = True
+sinal_malha_aberta = 3
 referencia = ref_cm * (5 / 30)
 kp = 6
 ki = 2
 tempo_amostragem = 0.05
 
 
-now = 0
-
 
 channels = array('I', [0, 1, 2]) #Entradas analógicas
 num_channels = len(channels)
 buffer = array('d', [0.0] * num_channels)
 
-write_channels = array('I', [0]) #write channel
+write_channels = array('I', [0]) #Usando saida analógica 4
 write_num_channels = len(write_channels)
 write_buffer = array('d', [3.7])
 
-digital_channel = array('I', [0,1]) #pino digital para habilitar o VOLTPAQ2
+digital_channel = array('I', [0,1]) #pinos digitais para habilitar o VOLTPAQ2
 digital_num = len(digital_channel)
-digital_buffer = array('b', [1,0]) 
+digital_buffer = array('b', [1,1]) 
 
 card = HIL()
 
@@ -51,8 +50,8 @@ def main():
 
     try:
         card.open("q8_usb","0")
-        with open('data.csv', 'a+') as file:
-            file.write(f'DataHora;Referencia;Nivel;Erro;Sinal_de_Controle;Corrente_na_Bomba\n')
+        #with open('data.csv', 'a+') as file:
+         #   file.write(f'DataHora;Referencia;Nivel;Erro;Sinal_de_Controle;Corrente_na_Bomba\n')
         while True:
             
 
@@ -71,7 +70,7 @@ def main():
             if malha_fechada:
                 u = kp * erro + ki * erro_ant
             else:
-                u = 4
+                u = sinal_malha_aberta
             erro_ant = erro_ant + erro
 
             if erro_ant > 3: #limitador da parcela intergrativa positiva
@@ -81,18 +80,16 @@ def main():
            
             print('Sinal de controle antes: ', u)
             
-            
-            erro_new = erro * (30 / 5)
-            nivel_tanque_2_new = nivel_tanque_2 * (30 / 5)      
+                
 
             aplica_controle(u)
-            trava(nivel_tanque_2, u)
+            trava(nivel_tanque_1,nivel_tanque_2, u)
            
 
             time.sleep(tempo_amostragem)
 
-            with open('data.csv', 'a+') as file:
-                file.write(f'{datetime.now()};{ref_cm};{nivel_tanque_2_new:.2f};{erro_new:.2f};{u:.2f};{corrente_bomba:.2f}\n')
+            #with open('data.csv', 'a+') as file:
+             #   file.write(f'{datetime.now()};{ref_cm};{nivel_tanque_2_new:.2f};{erro_new:.2f};{u:.2f};{corrente_bomba:.2f}\n')
             
                 
                 
@@ -118,16 +115,20 @@ def aplica_controle(sinal_controle: float):
     card.write_analog(write_channels, write_num_channels, write_buffer)
 
             
-def trava(level_2: float, control_signal: float):  #Se o sinal de controle por positivo e atingir o limite máximo, desliga a bomba e para o programa
+def trava(level_1: float, level_2: float, control_signal: float):  #Se o sinal de controle por positivo e atingir o limite máximo, desliga a bomba e para o programa
     #Assim como se o sinal de controle for negativo e atingir o limite mínimo
     print('Trava ativa!')
-    if control_signal < 0 and level_2 < 0.1:
+    if control_signal < 0 and level_2 < 0.5:
         desligar_bomba()
         print('NÍVEL CRÍTICO INFERIOR ATINGIDO - software interrompido por segurança!!!')
         exit()
-    if control_signal > 0 and level_2 > 4.8:
+    if control_signal > 0 and level_2 >= 5:
         desligar_bomba()
-        print('NÍVEL CRÍTICO SUPERIOR ATINGIDO - software interrompido por segurança!!!')
+        print('NÍVEL CRÍTICO SUPERIOR DO TANQUE 2 ATINGIDO - software interrompido por segurança!!!')
+        exit()
+    if control_signal > 0 and level_1 >= 5:
+        desligar_bomba()
+        print('NÍVEL CRÍTICO SUPERIOR DO TANQUE 1 ATINGIDO - software interrompido por segurança!!!')
         exit()
     
 def desligar_bomba():
