@@ -11,9 +11,9 @@ from array import array
 import time
 from datetime import datetime
 from quanser.hardware import HIL, HILError
+import os
 
-
-ref_cm=29
+ref_cm=27
 
 nivel_tanque_2 = 0.0
 malha_fechada = True
@@ -25,11 +25,11 @@ tempo_amostragem = 0.05
 
 
 
-channels = array('I', [0, 1, 2]) #Entradas analógicas
+channels = array('I', [3, 6, 7]) #Entradas analógicas
 num_channels = len(channels)
 buffer = array('d', [0.0] * num_channels)
 
-write_channels = array('I', [0]) #Usando saida analógica 4
+write_channels = array('I', [7]) #Usando saida analógica 0
 write_num_channels = len(write_channels)
 write_buffer = array('d', [3.7])
 
@@ -53,7 +53,12 @@ def main():
         #with open('data.csv', 'a+') as file:
          #   file.write(f'DataHora;Referencia;Nivel;Erro;Sinal_de_Controle;Corrente_na_Bomba\n')
         while True:
-            
+            print('########## Instituto Federal de Brasília ##########')
+            print('########## Sistema de Tanques da Quanser ##########')
+            print('########## Autor: Werbet L. A. Silva ##############')
+            print('########## Agosto de 2022 #########################')
+            print('')
+            print('')
 
            
             start = datetime.now()
@@ -63,8 +68,8 @@ def main():
             erro = referencia - nivel_tanque_2
                  
                 
-            print("Erro: ", erro)
-            print("Erro ant: ", erro_ant)
+            print("Erro: ", round(erro, 2))
+            print("Erro ant: ", round(erro_ant, 2))
 
             #Controlador:
             if malha_fechada:
@@ -78,7 +83,7 @@ def main():
             if erro_ant < -3: #limitador da parcela intergrativa positiva
                 erro_ant = -3
            
-            print('Sinal de controle antes: ', u)
+            print('Sinal de controle antes: ', round(u,2))
             
                 
 
@@ -86,8 +91,8 @@ def main():
             trava(nivel_tanque_1,nivel_tanque_2, u)
            
 
-            time.sleep(tempo_amostragem)
-
+            time.sleep(tempo_amostragem) #define o intervalo de amostragem
+            os.system('cls') #para limpar a tela
             #with open('data.csv', 'a+') as file:
              #   file.write(f'{datetime.now()};{ref_cm};{nivel_tanque_2_new:.2f};{erro_new:.2f};{u:.2f};{corrente_bomba:.2f}\n')
             
@@ -109,7 +114,7 @@ def aplica_controle(sinal_controle: float):
         sinal_controle = 4
     if (sinal_controle <= -2):
         sinal_controle = -2
-    print('Sinal de controle depois: ', sinal_controle)
+    print('Sinal de controle depois: ', round(sinal_controle, 2))
     write_buffer = array('d', [sinal_controle])
     card.write_digital(digital_channel, digital_num, digital_buffer)
     card.write_analog(write_channels, write_num_channels, write_buffer)
@@ -138,12 +143,12 @@ def desligar_bomba():
 
 def leia():
     card.read_analog(channels, num_channels, buffer)
-    nivel_tanque_1 = buffer[1]
-    nivel_tanque_2 = buffer[0]
+    nivel_tanque_1 = buffer[0]
+    nivel_tanque_2 = buffer[1]
     corrente_bomba = buffer[2]
-    print('Nivel tanque 1: ', nivel_tanque_1)
-    print('Nivel tanque 2: ', nivel_tanque_2)
-    print('Corrente na bomba: ', corrente_bomba)
+    print('Nivel tanque 1: ', round(nivel_tanque_1, 2))
+    print('Nivel tanque 2: ', round(nivel_tanque_2, 2))
+    print('Corrente na bomba: ', round(corrente_bomba, 2))
 
     if nivel_tanque_1 == 0.0 and nivel_tanque_2 == 0.0 and corrente_bomba == 0.0:
         desligar_bomba()
