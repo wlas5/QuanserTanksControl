@@ -14,7 +14,6 @@ from quanser.hardware import HIL, HILError
 import os
 
 ref_cm=27
-
 nivel_tanque_2 = 0.0
 malha_fechada = True
 sinal_malha_aberta = 3
@@ -24,14 +23,15 @@ ki = 2
 tempo_amostragem = 0.05
 
 
-
-channels = array('I', [3, 6, 7]) #Entradas analógicas
+#Congiguração das entradas analógicas do módulo Q8-USB
+channels = array('I', [3, 6, 7]) #indica que as entradas 3,6 e 7 do Q8 serão utilizadas (3 e 6 para leitura dos nívels e 7 para a leitura da corrente na bomba
 num_channels = len(channels)
 buffer = array('d', [0.0] * num_channels)
 
-write_channels = array('I', [7]) #Usando saida analógica 0
+#Congiguração das saídas analógicas do módulo Q8-USB
+write_channels = array('I', [7]) # Indica que a saída analógia 7 será utilizada para acionamento da bomba
 write_num_channels = len(write_channels)
-write_buffer = array('d', [3.7])
+
 
 digital_channel = array('I', [0,1]) #pinos digitais para habilitar o VOLTPAQ2
 digital_num = len(digital_channel)
@@ -115,8 +115,9 @@ def aplica_controle(sinal_controle: float):
     if (sinal_controle <= -2):
         sinal_controle = -2
     print('Sinal de controle depois: ', round(sinal_controle, 2))
-    write_buffer = array('d', [sinal_controle])
-    card.write_digital(digital_channel, digital_num, digital_buffer)
+
+    write_buffer = array('d', [sinal_controle]) 
+    card.write_digital(digital_channel, digital_num, digital_buffer) #Garante que o canal do VoltPAQ vai estar ativo
     card.write_analog(write_channels, write_num_channels, write_buffer)
 
             
